@@ -21,11 +21,18 @@ import com.badlogic.gdx.math.Quaternion;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import me.vinceh121.n2ae.gltf.GLTF;
 import me.vinceh121.n2ae.gltf.GLTFGenerator;
+import me.vinceh121.n2ae.gltf.Image;
+import me.vinceh121.n2ae.gltf.Material;
 import me.vinceh121.n2ae.gltf.Node;
+import me.vinceh121.n2ae.gltf.PbrMetallicRoughness;
+import me.vinceh121.n2ae.gltf.Primitive;
+import me.vinceh121.n2ae.gltf.Texture;
+import me.vinceh121.n2ae.gltf.TextureInfo;
 import me.vinceh121.n2ae.model.NvxFileReader;
 import me.vinceh121.n2ae.script.ICommandCall;
 import me.vinceh121.n2ae.script.NOBClazz;
@@ -38,7 +45,7 @@ public class CatalogueGenerator {
 	private final List<Asset> assets = new Vector<>();
 	private final ExecutorService exec;
 	private Map<String, NOBClazz> classModel;
-	private Path origIn = Paths.get("./orig"), assetsOut = Paths.get("./assets");
+	private Path origIn = Paths.get("./orig"), assetsOut = Paths.get("/tmp/assets");
 
 	public static void main(String[] args) throws IOException {
 		CatalogueGenerator gen = new CatalogueGenerator();
@@ -48,7 +55,7 @@ public class CatalogueGenerator {
 				}));
 
 		gen.processAll();
-//		gen.writeGltf(Path.of("./orig/a_ammo.n/"));
+//		gen.writeGltf(Path.of("./orig/first_island.n/"));
 		System.exit(0);
 	}
 
@@ -149,11 +156,11 @@ public class CatalogueGenerator {
 			children.addAll(this.recurseVisuals(gen, field, (ObjectNode) cn));
 		}
 
-		Node gltfNode;
 		if ("n3dnode".equals(node.get("@class").asText())) {
 			JsonNode meshnode = getChildOfType(node, "nmeshnode");
 			if (meshnode != null) {
 				Path intPath = Paths.get(convertPath(meshnode.get("setfilename").asText()));
+				Node gltfNode;
 				try (InputStream mdlIn = Files.newInputStream(origIn.resolve(intPath))) {
 					NvxFileReader mdl = new NvxFileReader(mdlIn);
 					mdl.readAll();
@@ -166,11 +173,56 @@ public class CatalogueGenerator {
 					gltfNode.getChildren().addAll(children);
 					newChildren.add(gen.getGltf().getNodes().lastIndexOf(gltfNode));
 				}
+
+				JsonNode textureNode = getChildOfType(node, "ntexarraynode");
+				if (textureNode != null) {
+					ArrayNode setTex = (ArrayNode) textureNode.get("settexture"); // should be guaranteed to be an array
+					if (setTex.get(0).isArray()) {
+						// FIXME currently ignores multi-textures, might be too complicated than it is
+						// worth
+//						for (int i = 0; i < setTex.size(); i++) {
+						int i = 0;
+						assert i == setTex.get(i).get(0).asInt();
+						this.makeTexture(i, gen, setTex.get(i).get(1).asText(), gltfNode);
+//						}
+					} else {
+						assert 0 == setTex.get(0).asInt();
+						this.makeTexture(0, gen, setTex.get(1).asText(), gltfNode);
+					}
+				}
 			}
 		} else if (children.size() > 0) {
 			newChildren.add(this.makeEmptyNode(gen, parentField, children));
 		}
 		return newChildren;
+	}
+
+	private void makeTexture(int i, GLTFGenerator gen, String rawPath, Node targetNode) {
+		Path imgPath = Paths.get(convertPath(rawPath));
+
+		Image img = new Image();
+		img.setUri(imgPath.toString().replace(".ntx", ".png"));
+		gen.getGltf().getImages().add(img);
+
+		Texture tex = new Texture();
+		tex.setName(imgPath.getFileName().toString());
+		tex.setSource(gen.getGltf().getImages().lastIndexOf(img));
+		gen.getGltf().getTextures().add(tex);
+
+		TextureInfo texInfo = new TextureInfo();
+		texInfo.setIndex(gen.getGltf().getTextures().lastIndexOf(tex));
+		texInfo.setTexCoord(i);
+
+		PbrMetallicRoughness pbr = new PbrMetallicRoughness();
+		pbr.setBaseColorTexture(texInfo);
+
+		Material mat = new Material();
+		mat.setName(imgPath.getFileName().toString());
+		mat.setPbrMetallicRoughness(pbr);
+		gen.getGltf().getMaterials().add(mat);
+
+		Primitive pri = gen.getGltf().getMeshes().get(targetNode.getMesh()).getPrimitives().get(0);
+		pri.setMaterial(gen.getGltf().getMaterials().lastIndexOf(mat));
 	}
 
 	private int makeEmptyNode(GLTFGenerator gen, String nodeName, List<Integer> children) {
