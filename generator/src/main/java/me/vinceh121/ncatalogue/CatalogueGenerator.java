@@ -12,6 +12,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -31,6 +34,7 @@ public class CatalogueGenerator {
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	private static final JsonScriptGenerator scriptGen = new JsonScriptGenerator(MAPPER);
 	private final List<Asset> assets = new Vector<>();
+	private final ExecutorService exec;
 	private Map<String, NOBClazz> classModel;
 	private Path origIn = Paths.get("./orig"), assetsOut = Paths.get("./assets");
 
@@ -42,6 +46,11 @@ public class CatalogueGenerator {
 				}));
 
 		gen.processAll();
+		System.exit(0);
+	}
+
+	public CatalogueGenerator() {
+		this.exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 	}
 
 	public void processAll() throws IOException {
@@ -52,18 +61,25 @@ public class CatalogueGenerator {
 			if (!"_main.tcl".equals(p.getFileName().toString())) {
 				continue;
 			}
-			System.out.println(p);
+			this.exec.submit(() -> {
+				System.out.println(p);
 
-			try {
-				this.writeGltf(p.getParent());
+				try {
+					this.writeGltf(p.getParent());
 
-				Asset a = new Asset();
-				a.setName(p.getParent().toString());
-				this.assets.add(a);
-			} catch (IOException e) {
-				System.err.println("Failed to process " + p);
-				e.printStackTrace();
-			}
+					Asset a = new Asset();
+					a.setName(p.getParent().toString());
+					this.assets.add(a);
+				} catch (IOException e) {
+					System.err.println("Failed to process " + p);
+					e.printStackTrace();
+				}
+			});
+		}
+
+		ThreadPoolExecutor e = (ThreadPoolExecutor) this.exec;
+		while (e.getActiveCount() > 0) {
+			Thread.yield();
 		}
 	}
 
