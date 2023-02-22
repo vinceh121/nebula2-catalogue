@@ -132,6 +132,7 @@ public class CatalogueGenerator {
 
 			gen.buildBasicScene(name);
 			gen.buildBuffer(bufferOut.getFileName().toString());
+			gen.updateRootNodes();
 			return gen.getGltf();
 		}
 	}
