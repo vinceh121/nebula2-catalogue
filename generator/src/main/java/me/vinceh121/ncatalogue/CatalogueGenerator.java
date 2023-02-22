@@ -8,6 +8,7 @@ import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import com.badlogic.gdx.math.Quaternion;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,11 +48,16 @@ public class CatalogueGenerator {
 				}));
 
 		gen.processAll();
+//		gen.writeGltf(Path.of("./orig/a_ammo.n/"));
 		System.exit(0);
 	}
 
 	public CatalogueGenerator() {
-		this.exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		this(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
+	}
+
+	public CatalogueGenerator(ExecutorService exec) {
+		this.exec = exec;
 	}
 
 	public void processAll() throws IOException {
@@ -114,7 +121,7 @@ public class CatalogueGenerator {
 
 		try (FileOutputStream out = new FileOutputStream(bufferOut.toFile())) {
 			GLTFGenerator gen = new GLTFGenerator(out);
-			this.recurseVisuals(gen, visual);
+			this.recurseVisuals(gen, "visual", visual);
 
 			gen.buildBasicScene(name);
 			gen.buildBuffer(bufferOut.getFileName().toString());
@@ -122,10 +129,13 @@ public class CatalogueGenerator {
 		}
 	}
 
-	private void recurseVisuals(GLTFGenerator gen, ObjectNode node) throws IOException {
-		if (!"n3dnode".equals(node.get("@class").asText())) {
-			return;
+	private List<Integer> recurseVisuals(GLTFGenerator gen, String parentField, ObjectNode node) throws IOException {
+		if (!node.isObject()) {
+			return List.of();
 		}
+
+		List<Integer> newChildren = new ArrayList<>();
+		List<Integer> children = new ArrayList<>();
 
 		Iterator<String> fields = node.fieldNames();
 		while (fields.hasNext()) {
@@ -136,19 +146,39 @@ public class CatalogueGenerator {
 				continue;
 			}
 
-			JsonNode meshnode = getChildOfType(cn, "nmeshnode");
+			children.addAll(this.recurseVisuals(gen, field, (ObjectNode) cn));
+		}
+
+		Node gltfNode;
+		if ("n3dnode".equals(node.get("@class").asText())) {
+			JsonNode meshnode = getChildOfType(node, "nmeshnode");
 			if (meshnode != null) {
-				try (InputStream mdlIn =
-						Files.newInputStream(origIn.resolve(convertPath(meshnode.get("setfilename").asText())))) {
+				Path intPath = Paths.get(convertPath(meshnode.get("setfilename").asText()));
+				try (InputStream mdlIn = Files.newInputStream(origIn.resolve(intPath))) {
 					NvxFileReader mdl = new NvxFileReader(mdlIn);
 					mdl.readAll();
-					Node gltfNode = gen.addMesh(field, mdl.getTypes(), mdl.getVertices(), mdl.getTriangles());
+					gltfNode = gen.addMesh(parentField + "." + intPath.getFileName(),
+							mdl.getTypes(),
+							mdl.getVertices(),
+							mdl.getTriangles());
 					gltfNode.setTranslation(this.getTranslation(node));
 					gltfNode.setRotation(this.getRotation(node));
+					gltfNode.getChildren().addAll(children);
+					newChildren.add(gen.getGltf().getNodes().lastIndexOf(gltfNode));
 				}
 			}
-
+		} else if (children.size() > 0) {
+			newChildren.add(this.makeEmptyNode(gen, parentField, children));
 		}
+		return newChildren;
+	}
+
+	private int makeEmptyNode(GLTFGenerator gen, String nodeName, List<Integer> children) {
+		Node n = new Node();
+		n.setName(nodeName);
+		n.getChildren().addAll(children);
+		gen.getGltf().getNodes().add(n);
+		return gen.getGltf().getNodes().lastIndexOf(n);
 	}
 
 	private String convertPath(String path) {
@@ -165,7 +195,7 @@ public class CatalogueGenerator {
 		if (t == null) {
 			return new float[3];
 		}
-		return new float[] { (float) t.get(0).asDouble(), (float) t.get(3).asDouble(), (float) t.get(2).asDouble() };
+		return new float[] { (float) t.get(0).asDouble(), (float) t.get(1).asDouble(), (float) t.get(2).asDouble() };
 	}
 
 	private float[] getRotation(JsonNode n) {
@@ -173,8 +203,9 @@ public class CatalogueGenerator {
 		if (r == null) {
 			return new float[] { 0, 0, 0, 1 };
 		}
-		return new float[] { (float) r.get(0).asDouble(), (float) r.get(3).asDouble(), (float) r.get(2).asDouble(),
-				(float) r.get(3).asDouble() };
+		Quaternion q = new Quaternion()
+			.setEulerAngles((float) r.get(0).asDouble(), (float) r.get(1).asDouble(), (float) r.get(2).asDouble());
+		return new float[] { q.x, q.y, q.z, q.w };
 	}
 
 	private JsonNode getChildOfType(JsonNode n, String type) {
