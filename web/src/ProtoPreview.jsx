@@ -1,8 +1,7 @@
 import { Component } from "preact";
-import * as THREE from "three";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { AmbientLight, GridHelper } from "three";
+import { AmbientLight, AxesHelper, DirectionalLight, GridHelper, HemisphereLight, MeshPhongMaterial, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 
 
 class ProtoPreview extends Component {
@@ -12,25 +11,29 @@ class ProtoPreview extends Component {
 		super(props, ctx);
 		const { proto } = props;
 
-		const scene = new THREE.Scene();
-		const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-		const renderer = new THREE.WebGLRenderer();
+		const scene = new Scene();
+		const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
+		camera.position.set(50, 50, 50);
+
+		const renderer = new WebGLRenderer();
 		renderer.setSize(500, 500);
-		renderer.toneMapping = THREE.ACESFilmicToneMapping;
-		renderer.toneMappingExposure = 1;
-		renderer.outputEncoding = THREE.sRGBEncoding;
 
 		const render3d = () => {
 			renderer.render(scene, camera);
 		};
 
-		const ambLight = new AmbientLight(0xffffff, 0.8);
+		const ambLight = new AmbientLight(0xffffff, 0.6);
+		ambLight.position.set(0, 1, 0);
 		scene.add(ambLight);
+
+		const dirLight = new DirectionalLight(0xffffff, 1);
+		dirLight.position.set(1, 1, 1).normalize();
+		scene.add(dirLight);
 
 		const grid = new GridHelper(2000, 20, 0x888888, 0x444444);
 		scene.add(grid);
 
-		const axes = new THREE.AxesHelper( 500 );
+		const axes = new AxesHelper(5);
 		scene.add(axes);
 
 		const orbit = new OrbitControls(camera, renderer.domElement);
@@ -43,11 +46,20 @@ class ProtoPreview extends Component {
 		this.domElement = renderer.domElement;
 
 		const loader = new GLTFLoader();
-		loader.load(`/assets/${proto}`, gltf => {
-			scene.add(gltf.scene);
-			console.log(gltf);
-			render3d();
-		}, console.error);
+		fetch(`/assets/${proto}`).then(res => res.json()).then(data => {
+			// HACK: we don't use loader.load() because we want to add the unlit extension cause
+			//	I don't want to mess up the downloads with this
+			data.extensionsUsed = ["KHR_materials_unlit"];
+
+			for (const mat of data.materials) {
+				mat.extensions = { "KHR_materials_unlit": {} };
+			}
+
+			loader.parse(data, "/assets/", gltf => {
+				scene.add(gltf.scene);
+				render3d();
+			}, console.error);
+		});
 	}
 
 	shouldComponentUpdate() {
