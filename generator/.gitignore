@@ -2,4 +2,7 @@
 .project
 /.settings/
 /target/
-
+/assets/
+/orig/
+/orig
+assets.json
