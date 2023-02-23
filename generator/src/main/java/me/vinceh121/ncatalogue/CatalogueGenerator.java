@@ -56,6 +56,9 @@ public class CatalogueGenerator {
 
 		gen.processAll();
 //		gen.writeGltf(Path.of("./orig/first_island.n/"));
+
+		gen.getAssets().sort((a1, a2) -> a1.getName().compareTo(a2.getName()));
+		MAPPER.writeValue(new File("./assets.json"), gen.getAssets());
 		System.exit(0);
 	}
 
@@ -82,7 +85,7 @@ public class CatalogueGenerator {
 					this.writeGltf(p.getParent());
 
 					Asset a = new Asset();
-					a.setName(p.getParent().toString());
+					a.setName(p.getParent().getFileName().toString());
 					this.assets.add(a);
 				} catch (IOException e) {
 					System.err.println("Failed to process " + p);
@@ -303,5 +306,9 @@ public class CatalogueGenerator {
 
 	public void setAssetsOut(Path assetsOut) {
 		this.assetsOut = assetsOut;
+	}
+
+	public List<Asset> getAssets() {
+		return assets;
 	}
 }
