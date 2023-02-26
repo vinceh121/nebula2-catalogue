@@ -2,32 +2,21 @@ import { Component } from "preact";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { AmbientLight, AxesHelper, DirectionalLight, GridHelper, PerspectiveCamera, Scene, WebGLRenderer } from "three";
-import { createRef } from "preact";
-import Loader from "./Loader";
 
-
-const canvasWidth = 300;
-const canvasHeight = 300;
 
 class ProtoViewer extends Component {
-	ref = createRef();
-	proto;
 	domElement;
 
 	constructor(props, ctx) {
 		super(props, ctx);
 		const { proto } = props;
-		this.proto = proto;
-		this.state = { inView: false };
-	}
 
-	buildWebGL() {
 		const scene = new Scene();
 		const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
 		camera.position.set(50, 50, 50);
 
 		const renderer = new WebGLRenderer();
-		renderer.setSize(canvasWidth, canvasHeight);
+		renderer.setSize(500, 500);
 
 		const render3d = () => {
 			renderer.render(scene, camera);
@@ -40,6 +29,12 @@ class ProtoViewer extends Component {
 		const dirLight = new DirectionalLight(0xffffff, 1);
 		dirLight.position.set(1, 1, 1).normalize();
 		scene.add(dirLight);
+
+		const grid = new GridHelper(2000, 20, 0x888888, 0x444444);
+		scene.add(grid);
+
+		const axes = new AxesHelper(5);
+		scene.add(axes);
 
 		const orbit = new OrbitControls(camera, renderer.domElement);
 		orbit.addEventListener("change", render3d);
@@ -67,33 +62,17 @@ class ProtoViewer extends Component {
 		});
 	}
 
-	handleScroll(event) {
-		const winHeight = window.innerHeight;
-		const scrollY = window.scrollY;
-		const scrollMaxY = scrollY + winHeight;
-		const elemY = this.ref.current.getBoundingClientRect().top;
-		const elemMaxY = this.ref.current.getBoundingClientRect().bottom;
-
-		const inView = (elemY >= 0 && elemY <= scrollMaxY) && (elemMaxY >= 0 && elemMaxY <= scrollMaxY);
-		this.state = { inView };
+	shouldComponentUpdate() {
+		return false;
 	}
 
 	componentDidMount() {
-		window.addEventListener("scroll", (e) => this.handleScroll(e));
-	}
-
-	componentWillUnmount() {
-		window.removeEventListener("scroll", (e) => this.handleScroll(e));
+		this.base.appendChild(this.domElement);
 	}
 
 	render() {
 		return (
-			<div ref={this.ref}>
-				{
-					this.state.inView ?
-						<>owo</>// this.base.appendChild(this.domElement)
-						: <div width={canvasWidth} hight={canvasHeight}><Loader /></div>
-				}
+			<div>
 			</div>
 		);
 	}

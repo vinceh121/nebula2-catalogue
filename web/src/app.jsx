@@ -3,15 +3,19 @@ import { Route } from "wouter";
 import './app.css';
 import Home from "./Home";
 import About from "./About";
-import NoWebGLError from './NoWebGLError';
 import ToolBar from './ToolBar';
+import Alert from "./components/Alert";
 
 export function App() {
 	return (
 		<>
 			<ToolBar />
 
-			{!WebGL.isWebGLAvailable() ? <NoWebGLError /> : undefined}
+			{
+				!WebGL.isWebGLAvailable() ?
+					<Alert>This catalogue needs WebGL to render objects, but it doesn't look like your browser has WebGL available.</Alert>
+					: undefined
+			}
 
 			<div>
 				<Route path="/"><Home /></Route>
