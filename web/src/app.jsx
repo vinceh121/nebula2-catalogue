@@ -5,6 +5,7 @@ import Home from "./Home";
 import About from "./About";
 import ToolBar from './ToolBar';
 import Alert from "./components/Alert";
+import Proto from "./Proto";
 
 export function App() {
 	return (
@@ -20,6 +21,7 @@ export function App() {
 			<div>
 				<Route path="/"><Home /></Route>
 				<Route path="/about"><About /></Route>
+				<Route path="/proto/:proto">{param => <Proto proto={param.proto.endsWith(".n") ? param.proto : param.proto + ".n"} />}</Route>
 			</div>
 		</>
 	)

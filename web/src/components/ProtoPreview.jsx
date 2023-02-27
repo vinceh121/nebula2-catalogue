@@ -1,14 +1,15 @@
 import { Component } from "preact";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { AmbientLight, Box3, DirectionalLight, PerspectiveCamera, Scene, WebGLRenderer, Vector3 } from "three";
+import { AmbientLight, DirectionalLight, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 import { createRef } from "preact";
 import Loader from "./Loader";
 import Alert from "./Alert";
+import { alignCameraToScene } from "./threeDeeUtils";
 
 const canvasWidth = 300;
 const canvasHeight = 300;
 
-class ProtoViewer extends Component {
+class ProtoPreview extends Component {
 	ref = createRef();
 	intersectionObserver = new IntersectionObserver(e => this.handleScroll(e));
 	renderer;
@@ -63,15 +64,7 @@ class ProtoViewer extends Component {
 			}
 
 			loader.parse(data, "/assets/", gltf => {
-				const camOffset = new Vector3(1, 1.4, -1);
-				const bb = new Box3();
-				gltf.scene.traverse(child => {
-					bb.expandByObject(child);
-				});
-				const median = bb.min.lerp(bb.max, 0.5);
-				const dist = bb.max.distanceTo(bb.min);
-				camera.position.copy(camOffset).multiplyScalar(dist / 1.3).add(median);
-				camera.lookAt(median);
+				alignCameraToScene(gltf.scene, camera);
 
 				scene.add(gltf.scene);
 				render3d();
@@ -135,4 +128,4 @@ class ProtoViewer extends Component {
 }
 
 
-export default ProtoViewer;
+export default ProtoPreview;
