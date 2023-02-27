@@ -1,7 +1,7 @@
 import { Component } from "preact";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { AmbientLight, AxesHelper, DirectionalLight, GridHelper, PerspectiveCamera, Scene, WebGLRenderer } from "three";
+import { AmbientLight, AxesHelper, Box3, Box3Helper, DirectionalLight, GridHelper, PerspectiveCamera, Scene, WebGLRenderer, Vector3 } from "three";
 import { createRef } from "preact";
 import Loader from "./Loader";
 import Alert from "./components/Alert";
@@ -27,8 +27,7 @@ class ProtoViewer extends Component {
 	buildWebGL() {
 		const scene = new Scene();
 		const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
-		camera.position.set(50, 70, 50);
-		camera.lookAt(0, 0, 0);
+		camera.position.set();
 
 		this.renderer = new WebGLRenderer();
 		this.renderer.setSize(canvasWidth, canvasHeight);
@@ -66,6 +65,16 @@ class ProtoViewer extends Component {
 			}
 
 			loader.parse(data, "/assets/", gltf => {
+				const camOffset = new Vector3(1, 1.4, -1);
+				const bb = new Box3();
+				gltf.scene.traverse(child => {
+					bb.expandByObject(child);
+				});
+				const median = bb.min.lerp(bb.max, 0.5);
+				const dist = bb.max.distanceTo(bb.min);
+				camera.position.copy(camOffset).multiplyScalar(dist / 1.3).add(median);
+				camera.lookAt(median);
+
 				scene.add(gltf.scene);
 				render3d();
 			}, console.error);
