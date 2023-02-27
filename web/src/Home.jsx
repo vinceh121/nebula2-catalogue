@@ -29,7 +29,7 @@ function Home() {
 		return <Loader />
 	}
 
-	return <div style={{ display: "flex", flexWrap: "wrap" }}>
+	return <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center" }}>
 		{assets.map(a => <Card title={a.name.substring(0, a.name.length - 2)} href={`/proto/${a.name}`}><ProtoPreview key={a.name} proto={a.name} /></Card>)}
 	</div>;
 }
