@@ -1,11 +1,9 @@
 import { Component } from "preact";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { AmbientLight, AxesHelper, Box3, Box3Helper, DirectionalLight, GridHelper, PerspectiveCamera, Scene, WebGLRenderer, Vector3 } from "three";
+import { AmbientLight, Box3, DirectionalLight, PerspectiveCamera, Scene, WebGLRenderer, Vector3 } from "three";
 import { createRef } from "preact";
 import Loader from "./Loader";
-import Alert from "./components/Alert";
-
+import Alert from "./Alert";
 
 const canvasWidth = 300;
 const canvasHeight = 300;

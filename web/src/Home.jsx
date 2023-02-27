@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import Alert from './components/Alert';
 import Card from './components/Card';
-import Loader from "./Loader";
-import ProtoPreview from "./ProtoPreview";
+import Loader from "./components/Loader";
+import ProtoPreview from "./components/ProtoPreview";
 
 function Home() {
 	const [assets, setAssets] = useState();
