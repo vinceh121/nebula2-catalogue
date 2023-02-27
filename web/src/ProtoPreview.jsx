@@ -106,8 +106,10 @@ class ProtoViewer extends Component {
 		if (this.domElement) {
 			this.base.removeChild(this.domElement);
 		}
-		this.renderer.dispose();
-		this.renderer.forceContextLoss();
+		if (this.renderer) {
+			this.renderer.dispose();
+			this.renderer.forceContextLoss();
+		}
 		this.domElement = undefined;
 	}
 
@@ -117,7 +119,7 @@ class ProtoViewer extends Component {
 
 	componentWillUnmount() {
 		this.intersectionObserver.unobserve(this.base);
-		this.renderer.dispose();
+		this.disposeWebGL();
 	}
 
 	render() {

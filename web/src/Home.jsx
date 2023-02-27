@@ -30,7 +30,7 @@ function Home() {
 	}
 
 	return <div style={{ display: "flex", flexWrap: "wrap" }}>
-		{assets.map(a => <Card title={a.name.substring(0, a.name.length - 2)}><ProtoPreview key={a.name} proto={a.name} /></Card>)}
+		{assets.map(a => <Card title={a.name.substring(0, a.name.length - 2)} href={`/proto/${a.name}`}><ProtoPreview key={a.name} proto={a.name} /></Card>)}
 	</div>;
 }
 
