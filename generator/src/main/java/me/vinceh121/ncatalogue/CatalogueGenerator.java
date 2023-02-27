@@ -1,6 +1,5 @@
 package me.vinceh121.ncatalogue;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,7 +17,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import com.badlogic.gdx.math.Quaternion;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -40,27 +38,12 @@ import me.vinceh121.n2ae.script.json.JsonScriptGenerator;
 import me.vinceh121.n2ae.script.nob.NOBParser;
 
 public class CatalogueGenerator {
-	private static final ObjectMapper MAPPER = new ObjectMapper();
+	public static final ObjectMapper MAPPER = new ObjectMapper();
 	private static final JsonScriptGenerator scriptGen = new JsonScriptGenerator(MAPPER);
 	private final List<Asset> assets = new Vector<>();
 	private final ExecutorService exec;
 	private Map<String, NOBClazz> classModel;
 	private Path origIn = Paths.get("./orig"), assetsOut = Paths.get("/tmp/assets");
-
-	public static void main(String[] args) throws IOException {
-		CatalogueGenerator gen = new CatalogueGenerator();
-
-		gen.setClassModel(MAPPER.readValue(new File("../../nebula2-assets-extractor/project-nomads.classmodel.json"),
-				new TypeReference<Map<String, NOBClazz>>() {
-				}));
-
-		gen.processAll();
-//		gen.writeGltf(Path.of("./orig/first_island.n/"));
-
-		gen.getAssets().sort((a1, a2) -> a1.getName().compareTo(a2.getName()));
-		MAPPER.writeValue(new File("./assets.json"), gen.getAssets());
-		System.exit(0);
-	}
 
 	public CatalogueGenerator() {
 		this(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
