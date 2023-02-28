@@ -39,7 +39,7 @@ jobs:
         run: pnpm i && pnpm run build
       - name: Move textures
         working-directory: data
-        run: cp -r --parents **/*.png ../assets
+        run: cp -r --parents **/*.png lib/**/*.png ../assets
       - name: Move assets
         run: cp -r assets/* web/dist/assets/
       - name: Deploy
