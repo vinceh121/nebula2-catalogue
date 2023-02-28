@@ -1,0 +1,54 @@
+name: Deployment
+
+on:
+  push:
+    branches: [deploy]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://pn-catalogue.vinceh121.me
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: sudo apt -y update && sudo apt -y install npm maven curl && sudo npm install -g pnpm
+      # - name: Setup Java 11
+      #   uses: actions/setup-java@v1
+      #   with:
+      #     java-version: 11
+      - name: Download data.npk
+        env:
+          DATA_ARCHIVE: ${{ secrets.DATA_ARCHIVE }}
+        run: curl -Lo data.npk https://cdn.vinceh121.me/upload/$DATA_ARCHIVE
+      - name: Download classmodel
+        run: curl -LO https://raw.githubusercontent.com/vinceh121/nebula2-assets-extractor/master/project-nomads.classmodel.json
+      - name: Download extractor
+        run: curl -Lo extractor.jar https://github.com/vinceh121/nebula2-assets-extractor/releases/download/v0.4.0/nebula2-assets-extractor-0.4.0-jar-with-dependencies.jar
+      - name: Extract data.npk
+        run: mkdir data && java -jar extractor.jar extract -m project-nomads.classmodel.json -i data.npk -o data -f png
+      - name: Build generator
+        working-directory: generator
+        run: mvn compile assembly:single
+      - name: Run generator
+        working-directory: generator
+        run: mkdir ../assets && java -jar target/nebula-catalogue*.jar -m ../project-nomads.classmodel.json -i ../data -o ../assets
+      - name: Build web
+        working-directory: web
+        run: pnpm i && pnpm run build
+      - name: Move textures
+        working-directory: data
+        run: cp -r --parents **/*.png ../assets
+      - name: Move assets
+        run: cp -r assets/* web/dist/assets/
+      - name: Deploy
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          source: web/dist
+          target: /var/www/html/pn-catalogue
+          overwrite: true
+          debug: true
