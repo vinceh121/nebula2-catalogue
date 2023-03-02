@@ -12,5 +12,10 @@ function alignCameraToScene(scene, camera) {
 	camera.lookAt(median);
 }
 
+function fixInfinity(vec) {
+	vec.x = Number.isFinite(vec.x) ? vec.x : 0;
+	vec.y = Number.isFinite(vec.y) ? vec.y : 0;
+	vec.z = Number.isFinite(vec.z) ? vec.z : 0;
+}
 
-export { alignCameraToScene };
+export { alignCameraToScene, fixInfinity };

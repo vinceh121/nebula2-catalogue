@@ -1,14 +1,17 @@
 import { Component } from "preact";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { AmbientLight, AxesHelper, DirectionalLight, GridHelper, PerspectiveCamera, Scene, WebGLRenderer } from "three";
+import { AmbientLight, AxesHelper, Box3, DirectionalLight, GridHelper, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from "three";
 import Alert from "./Alert";
-import { alignCameraToScene } from "./threeDeeUtils";
+import { alignCameraToScene, fixInfinity } from "./threeDeeUtils";
 
 
 class ProtoViewer extends Component {
 	renderer;
 	domElement;
+	scene;
+	originalCoords = [];
+	explodedCoords = [];
 
 	constructor(props, ctx) {
 		super(props, ctx);
@@ -29,8 +32,12 @@ class ProtoViewer extends Component {
 		this.domElement = undefined;
 	}
 
+	lastChild() {
+		return this.scene.children[this.scene.children.length - 1];
+	}
+
 	componentDidMount() {
-		const scene = new Scene();
+		this.scene = new Scene();
 		const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 		camera.position.set(50, 50, 50);
 
@@ -38,22 +45,22 @@ class ProtoViewer extends Component {
 		this.renderer.setSize(window.innerWidth, window.innerHeight);
 
 		const render3d = () => {
-			this.renderer.render(scene, camera);
+			this.renderer.render(this.scene, camera);
 		};
 
 		const ambLight = new AmbientLight(0xffffff, 0.6);
 		ambLight.position.set(0, 1, 0);
-		scene.add(ambLight);
+		this.scene.add(ambLight);
 
 		const dirLight = new DirectionalLight(0xffffff, 1);
 		dirLight.position.set(1, 1, 1).normalize();
-		scene.add(dirLight);
+		this.scene.add(dirLight);
 
 		const grid = new GridHelper(2000, 20, 0x888888, 0x444444);
-		scene.add(grid);
+		this.scene.add(grid);
 
 		const axes = new AxesHelper(5);
-		scene.add(axes);
+		this.scene.add(axes);
 
 		const orbit = new OrbitControls(camera, this.renderer.domElement);
 		orbit.addEventListener("change", render3d);
@@ -82,8 +89,8 @@ class ProtoViewer extends Component {
 
 			loader.parse(data, "/assets/", gltf => {
 				alignCameraToScene(gltf.scene, camera);
-
-				scene.add(gltf.scene);
+				this.scene.add(gltf.scene);
+				this.saveCoords(this.lastChild());
 				render3d();
 			}, console.error);
 		}, err => {
@@ -94,13 +101,52 @@ class ProtoViewer extends Component {
 		this.base.appendChild(this.domElement);
 	}
 
+	/**
+	 * Save original coords and build exploded coords
+	 */
+	saveCoords(root) {
+		const AXIS = 0;
+
+		let previousPos = 0;
+		for (const c of root.children) {
+			this.originalCoords.push(c.position.clone());
+
+			const bb = new Box3();
+			bb.expandByObject(c);
+			const dims = new Vector3().subVectors(bb.max, bb.min);
+			fixInfinity(dims);
+
+			const pos = c.position.clone();
+			pos.setComponent(AXIS,
+				dims.getComponent(AXIS)
+				+ previousPos
+			);
+			this.explodedCoords.push(pos);
+			previousPos += dims.getComponent(AXIS);
+		}
+	}
+
 	componentWillUnmount() {
 		this.disposeWebGL();
+	}
+
+	explode(exploded) {
+		const coords = exploded ? this.explodedCoords : this.originalCoords;
+
+		for (let i = 0; i < this.lastChild().children.length; i++) {
+			this.lastChild().children[i].position.copy(coords[i].clone());
+			console.log(this.lastChild().children[i].name, exploded, this.lastChild().children[i].position);
+		}
 	}
 
 	render() {
 		return (
 			<div>
+				<h3>{this.props.proto}</h3>
+				<div>
+					<input type="checkbox" id="explode" name="explode" onInput={e => this.explode(e.target.checked)} />
+					<label for="explode">Explode top level nodes</label>
+				</div>
 				{this.state.error ? <Alert>{this.state.error.toString()}</Alert> : undefined}
 			</div>
 		);
