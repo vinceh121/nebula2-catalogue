@@ -28,6 +28,7 @@ class ProtoViewer extends Component {
 		if (this.renderer) {
 			this.renderer.dispose();
 			this.renderer.forceContextLoss();
+			this.renderer = undefined;
 		}
 		this.domElement = undefined;
 	}
@@ -88,6 +89,9 @@ class ProtoViewer extends Component {
 			}
 
 			loader.parse(data, "/assets/", gltf => {
+				if (!this.domElement && !this.renderer) {
+					return;
+				}
 				alignCameraToScene(gltf.scene, camera);
 				this.scene.add(gltf.scene);
 				this.saveCoords(this.lastChild());
@@ -135,7 +139,6 @@ class ProtoViewer extends Component {
 
 		for (let i = 0; i < this.lastChild().children.length; i++) {
 			this.lastChild().children[i].position.copy(coords[i].clone());
-			console.log(this.lastChild().children[i].name, exploded, this.lastChild().children[i].position);
 		}
 	}
 

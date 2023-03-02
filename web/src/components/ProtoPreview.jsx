@@ -64,6 +64,9 @@ class ProtoPreview extends Component {
 			}
 
 			loader.parse(data, "/assets/", gltf => {
+				if (!this.domElement && !this.renderer) {
+					return;
+				}
 				alignCameraToScene(gltf.scene, camera);
 
 				scene.add(gltf.scene);
@@ -100,6 +103,7 @@ class ProtoPreview extends Component {
 		if (this.renderer) {
 			this.renderer.dispose();
 			this.renderer.forceContextLoss();
+			this.renderer = undefined;
 		}
 		this.domElement = undefined;
 	}
