@@ -86,8 +86,7 @@ public class CatalogueGenerator {
 	public void writeGltf(final Path prototype) throws IOException {
 		GLTF gltf = this.makeGltf(prototype, assetsOut.resolve(prototype.getFileName() + ".bin"));
 		if (gltf != null) {
-			MAPPER.writerWithDefaultPrettyPrinter()
-				.writeValue(assetsOut.resolve(prototype.getFileName().toString() + ".gltf").toFile(), gltf);
+			MAPPER.writeValue(assetsOut.resolve(prototype.getFileName().toString() + ".gltf").toFile(), gltf);
 		} else {
 			System.out.println("\tNo visuals: " + prototype);
 		}
