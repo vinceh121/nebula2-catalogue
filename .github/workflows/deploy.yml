@@ -36,7 +36,7 @@ jobs:
         run: mkdir ../assets && java -jar target/nebula-catalogue*.jar -m ../project-nomads.classmodel.json -i ../data -o ../assets
       - name: Build web
         working-directory: web
-        run: pnpm i && pnpm run build
+        run: pnpm i --no-frozen-lockfile && pnpm run build
       - name: Move textures
         working-directory: data
         run: cp -r --parents **/*.png lib/**/*.png ../assets
